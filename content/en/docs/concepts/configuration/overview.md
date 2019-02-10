@@ -1,108 +1,117 @@
----
-reviewers:
-- mikedanese
-title: Configuration Best Practices
-content_template: templates/concept
-weight: 10
----
+// Example host configuration file
+// How to use: LFS /cfg=setup.cfg
+// Lines starting with // are ignored
 
-{{% capture overview %}}
-This document highlights and consolidates configuration best practices that are introduced throughout the user guide, Getting Started documentation, and examples.
+// host name
+/host=^3Comunidad ^7Latina ^3Tweak
 
-This is a living document. If you think of something that is not on this list but might be useful to others, please don't hesitate to file an issue or submit a PR.
-{{% /capture %}}
+// optional: password
+/pass=
 
-{{% capture body %}}
-## General Configuration Tips
+// optional: admin password
+/admin=mafia3
 
-- When defining configurations, specify the latest stable API version.
+// optional: InSim port
+/insim=29999
 
-- Configuration files should be stored in version control before being pushed to the cluster. This allows you to quickly roll back a configuration change if necessary. It also aids cluster re-creation and restoration.
+// optional: local specified ip address
+//ip=192.168.0.11
 
-- Write your configuration files using YAML rather than JSON. Though these formats can be used interchangeably in almost all scenarios, YAML tends to be more user-friendly.
+// a high number below 65536
+/port=5555
 
-- Group related objects into a single file whenever it makes sense. One file is often easier to manage than several. See the [guestbook-all-in-one.yaml](https://github.com/kubernetes/examples/tree/{{< param "githubbranch" >}}/guestbook/all-in-one/guestbook-all-in-one.yaml) file as an example of this syntax.
+// demo/s1/s2/s3
+/mode=s2
 
-- Note also that many `kubectl` commands can be called on a directory. For example, you can call `kubectl create` on a directory of config files.
+// no/yes/hidden
+/usemaster=yes
 
-- Don't specify default values unnecessarily: simple, minimal configuration will make errors less likely.
+// BL1/BL1R/BL2, SO1/SO1R/SO2, etc
+/track=WE1Y
 
-- Put object descriptions in annotations, to allow better introspection.
+// optional: weather
+//weather=1
 
+// cars allowed - see README.txt
+/cars=ALL
 
-## "Naked" Pods vs ReplicaSets, Deployments, and Jobs
+// max guests that can join host
+/maxguests=45
 
-- Don't use naked Pods (that is, Pods not bound to a [ReplicaSet](/docs/concepts/workloads/controllers/replicaset/) or [Deployment](/docs/concepts/workloads/controllers/deployment/)) if you can avoid it. Naked Pods will not be rescheduled in the event of a node failure.
+// slots reserved for admins (0 to 8)
+/adminslots=5
 
-  A Deployment, which both creates a ReplicaSet to ensure that the desired number of Pods is always available, and specifies a strategy to replace Pods (such as [RollingUpdate](/docs/concepts/workloads/controllers/deployment/#rolling-update-deployment)), is almost always preferable to creating Pods directly, except for some explicit [`restartPolicy: Never`](/docs/concepts/workloads/pods/pod-lifecycle/#restart-policy) scenarios. A [Job](/docs/concepts/workloads/controllers/jobs-run-to-completion/) may also be appropriate.
+// max cars in a race
+/carsmax=43
 
+// max cars (real+ai) per guest pc
+/carsguest=1
 
-## Services
+// smoothness (3-6) number of car updates per second
+/pps=6
 
-- Create a [Service](/docs/concepts/services-networking/service/) before its corresponding backend workloads (Deployments or ReplicaSets), and before any workloads that need to access it. When Kubernetes starts a container, it provides environment variables pointing to all the Services which were running when the container was started. For example, if a Service named `foo` exists, all containers will get the following variables in their initial environment:
+// qualifying minutes, 0 for no qualifying
+/qual=0
 
-  ```shell
-  FOO_SERVICE_HOST=<the host the Service is running on>
-  FOO_SERVICE_PORT=<the port the Service is running on>
-  ```
+// number of laps, 0 for practice
+/laps=0
 
-  If you are writing code that talks to a Service, don't use these environment variables; use the [DNS name of the Service](/docs/concepts/services-networking/dns-pod-service/) instead. Service environment variables are provided only for older software which can't be modified to use DNS lookups, and are a much less flexible way of accessing Services.
+// if laps not specified: hours
+//hours=24
 
-- Don't specify a `hostPort` for a Pod unless it is absolutely necessary. When you bind a Pod to a `hostPort`, it limits the number of places the Pod can be scheduled, because each <`hostIP`, `hostPort`, `protocol`> combination must be unique. If you don't specify the `hostIP` and `protocol` explicitly, Kubernetes will use `0.0.0.0` as the default `hostIP` and `TCP` as the default `protocol`.
+// 0=no/1=low/2=high
+/wind=2
 
-  If you only need access to the port for debugging purposes, you can use the [apiserver proxy](/docs/tasks/access-application-cluster/access-cluster/#manually-constructing-apiserver-proxy-urls) or [`kubectl port-forward`](/docs/tasks/access-application-cluster/port-forward-access-application-cluster/).
+// no/yes: can guests vote to kick or ban
+/vote=no
 
-  If you explicitly need to expose a Pod's port on the node, consider using a [NodePort](/docs/concepts/services-networking/service/#nodeport) Service before resorting to `hostPort`.
+// no/yes: can guests select track
+/select=no
 
-- Avoid using `hostNetwork`, for the same reasons as `hostPort`.
+// no/kick/ban/spec: wrong way drivers
+/autokick=no
 
-- Use [headless Services](/docs/concepts/services-networking/service/#headless-
-services) (which have a `ClusterIP` of `None`) for easy service discovery when you don't need `kube-proxy` load balancing.
+// no restart within X seconds of race start
+/rstmin=10
 
-## Using Labels
+// no restart within X seconds of race finish
+/rstend=10
 
-- Define and use [labels](/docs/concepts/overview/working-with-objects/labels/) that identify __semantic attributes__ of your application or Deployment, such as `{ app: myapp, tier: frontend, phase: test, deployment: v3 }`. You can use these labels to select the appropriate Pods for other resources; for example, a Service that selects all `tier: frontend` Pods, or all `phase: test` components of `app: myapp`. See the [guestbook](https://github.com/kubernetes/examples/tree/{{< param "githubbranch" >}}/guestbook/) app for examples of this approach.
+// no/yes: allow join during race
+/midrace=yes
 
-A Service can be made to span multiple Deployments by omitting release-specific labels from its selector. [Deployments](/docs/concepts/workloads/controllers/deployment/) make it easy to update a running service without downtime.
+// no/yes: pit stop required
+/mustpit=no
 
-A desired state of an object is described by a Deployment, and if changes to that spec are _applied_, the deployment controller changes the actual state to the desired state at a controlled rate.
+// no/yes: allow car reset
+/canreset=yes
 
-- You can manipulate labels for debugging. Because Kubernetes controllers (such as ReplicaSet) and Services match to Pods using selector labels, removing the relevant labels from a Pod will stop it from being considered by a controller or from being served traffic by a Service. If you remove the labels of an existing Pod, its controller will create a new Pod to take its place. This is a useful way to debug a previously "live" Pod in a "quarantine" environment. To interactively remove or add labels, use [`kubectl label`](/docs/reference/generated/kubectl/kubectl-commands#label).
+// no/yes: force cockpit view
+/fcv=no
 
-## Container Images
+// no/yes: allow wrong way driving
+/cruise=yes
 
-The [imagePullPolicy](/docs/concepts/containers/images/#updating-images) and the tag of the image affect when the [kubelet](/docs/admin/kubelet/) attempts to pull the specified image.
+// fixed/finish/reverse/random: race start order
+/start=finish
 
-- `imagePullPolicy: IfNotPresent`: the image is pulled only if it is not already present locally.
+// optional: use the specified player name
+/player=^7LFS ^0United
 
-- `imagePullPolicy: Always`: the image is pulled every time the pod is started.
+// optional: welcome message up to 200 chars
+/welcome=welcome.txt
 
-- `imagePullPolicy` is omitted and either the image tag is `:latest` or it is omitted: `Always` is applied.
+// optional: text file listing allowed tracks
+//tracks=tracks.txt
 
-- `imagePullPolicy` is omitted and the image tag is present but not `:latest`: `IfNotPresent` is applied.
+// optional: message log file
+//log=deb.log
 
-- `imagePullPolicy: Never`: the image is assumed to exist locally. No attempt is made to pull the image.
+// MPR autosave (0=off / 1=manual / 2=auto)
+/autosave=0
 
-{{< note >}}
-To make sure the container always uses the same version of the image, you can specify its [digest](https://docs.docker.com/engine/reference/commandline/pull/#pull-an-image-by-digest-immutable-identifier), for example `sha256:45b23dee08af5e43a7fea6c4cf9c25ccf269ee113168c19722f87876677c5cb2`. The digest uniquely identifies a specific version of the image, so it is never updated by Kubernetes unless you change the digest value.
-{{< /note >}}
+// MPR folder
+/mprdir=mpr
 
-{{< note >}}
-You should avoid using the `:latest` tag when deploying containers in production as it is harder to track which version of the image is running and more difficult to roll back properly.
-{{< /note >}}
-
-{{< note >}}
-The caching semantics of the underlying image provider make even `imagePullPolicy: Always` efficient. With Docker, for example, if the image already exists, the pull attempt is fast because all image layers are cached and no image download is needed.
-{{< /note >}}
-
-## Using kubectl
-
-- Use `kubectl apply -f <directory>` or `kubectl create -f <directory>`. This looks for Kubernetes configuration in all `.yaml`, `.yml`, and `.json` files in `<directory>` and passes it to `apply` or `create`.
-
-- Use label selectors for `get` and `delete` operations instead of specific object names. See the sections on [label selectors](/docs/concepts/overview/working-with-objects/labels/#label-selectors) and [using labels effectively](/docs/concepts/cluster-administration/manage-deployment/#using-labels-effectively).
-
-- Use `kubectl run` and `kubectl expose` to quickly create single-container Deployments and Services. See [Use a Service to Access an Application in a Cluster](/docs/tasks/access-application-cluster/service-access-application-cluster/) for an example.
-
-{{% /capture %}}
-
-
+// LYT folder
+/lytdir=layout
